@@ -1,0 +1,20 @@
+.halfbreak {
+    display: block;
+    content: "";
+    margin-top: 0.5em;
+}
+
+.negative {
+    display: inline;
+    color: red;
+    font-style: italic;
+}
+
+.positive {
+    display: inline;
+    color: green;
+}
+
+div {
+    display: inline;
+}
