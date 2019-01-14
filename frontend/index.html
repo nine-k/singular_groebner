@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title> Groebner basis calculator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="scripts.js"></script>
+</head>
+
+<body>
+    <h1> Groebner basis calculator</h1>
+    <h4> Powered by Singular</h4>
+    <form id="calc_inputs">
+
+        Field order:<br>
+        <input type="text" id="order" placeholder="-1" required>
+        <div id="order_correct"></div>
+        <br> <br class="halfbreak">
+
+        Variables:<br>
+        <input type="text" id="vars" placeholder="x;y;z" required>
+        <div id="vars_correct"></div>
+        <br> <br class="halfbreak">
+
+        Ideal basis:<br>
+        <input type="text" id="basis" placeholder="x^2; xy; 3z + 2x" required>
+        <div id="basis_correct"></div>
+        <br> <br class="halfbreak">
+
+        Polynomial order rule:<br>
+        <select id="order_type">
+            <option selected="selected" value="deglex">deglex</option>
+            <option value="other">other</option>
+        </select>
+        <br> <br class="halfbreak">
+
+        Email (for calculation results): <br>
+        <input type="text" id="res_email" placeholder="example@mail.com">
+        <div id="email_correct"></div>
+        <br> <br class="halfbreak">
+
+        <input type="submit" id="send" value="Calculate">
+    </form>
+    <script>init();</script>
+</body>
+</html>
