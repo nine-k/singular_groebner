@@ -19,6 +19,17 @@ function send_data() {
     message.order = $('#order_type').val();
     message.email = $('#res_email').val();
 
-    var test_str = JSON.stringify(message);
-    console.log(test_str);
+    var post_str = JSON.stringify(message);
+    // $.post('http://127.0.0.1:8000/calculations/submit_calculation', post_str, function(data) {}, 'json');
+    $.ajax({
+      url:'http://127.0.0.1:8000/calculations/submit_calculation',
+      type:"POST",
+      data: post_str,
+      contentType:"application/json",
+      dataType:"json",
+      success: function(){
+        return true;
+      }
+    });
+    console.log(post_str);
 }
