@@ -1,7 +1,8 @@
 function init() {
-    $('#order').attr('onblur', 'assert_order()');
+    $('#order').attr('onblur', 'assert_order();');
     // add asserts
 
+    $('#order_type').attr('onchange', 'check_orders();');
     $('#calc_inputs').attr('onsubmit', 'send_data(); return false;');
 }
 
@@ -9,6 +10,10 @@ function assert_characteristic() {
     // var str = $('#order').val()
 
     $('#characteristic_correct').html('<span class="positive"> \✓<\span>');
+}
+
+function check_orders() {
+
 }
 
 function send_data() {

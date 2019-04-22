@@ -11,6 +11,8 @@
 <body>
     <h1> Groebner basis calculator</h1>
     <h4> Powered by Singular</h4>
+    <a href="./howto.html">How to use</a>
+
     <form id="calc_inputs">
 
         Field characteristic:<br>
@@ -37,8 +39,10 @@
 
         Polynomial order rule:<br>
         <select id="order_type">
-            <option selected="selected" value="deglex">deglex</option>
-            <option value="other">other</option>
+            <option selected="selected" value="lp">lexographical</option>
+            <option value="Wp">weighted lexographical</option>
+            <option value="dp">degree reverse lexographical</option>
+            <option value="wp">weigted reverse lexographical</option>
         </select>
         <br> <br class="halfbreak">
 

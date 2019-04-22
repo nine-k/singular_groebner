@@ -25,7 +25,13 @@ def submit_calculation(request):
         calc_res = ''
         if data['request'] == 'commutative_groebner':
             logger.debug('calcing commutative groebner')
-            calc_res = '\n'.join(calcs.get_groebner_basis_commut(data['characteristic'], data['vars'], data['basis']))
+            calc_res = '\n'.join(
+                    calcs.get_groebner_basis_commut(
+                        data['characteristic'],
+                        data['vars'],
+                        data['basis']
+                        )
+                    )
         elif data['request'] == 'noncommutative_groebner':
             logger.debug('calcing noncommutative groebner')
             #data['max_order'] = int(data['max_order'])
