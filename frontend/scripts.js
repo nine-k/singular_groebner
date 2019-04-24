@@ -1,9 +1,20 @@
 function init() {
+    $('#commutative').attr('onclick', 'set_maxdeg_field();')
     $('#order').attr('onblur', 'assert_order();');
     // add asserts
 
     $('#order_type').attr('onchange', 'check_orders();');
     $('#calc_inputs').attr('onsubmit', 'send_data(); return false;');
+}
+
+function set_maxdeg_field() {
+    if ($('#commutative').is(":checked")) {
+        $('#max_deg').html('<br>Max monomial degree <br>'+
+                           '<input type="text" id="max_deg_input" value="5">'
+        )
+    } else {
+        $('#max_deg').html('')
+    }
 }
 
 function assert_characteristic() {
@@ -25,8 +36,14 @@ function send_data() {
     message.email = $('#res_email').val();
     if ($('#commutative').is(":checked")) {
         message.request = 'noncommutative_groebner';
+        message.max_degree = $('#max_deg_input').val()
     } else {
         message.request = 'commutative_groebner';
+    }
+    if ($('#hilbert').is(":checked")) {
+        message.hilbert = 1;
+    } else {
+        message.hilbert = 0;
     }
 
     var post_str = JSON.stringify(message);

@@ -71,7 +71,7 @@ def get_groebner_basis_commut(char, variables, ideal, order_type='dp'):
     outputs = list(filter(lambda x: len(x) > 0 and x[0] == '_', outputs))
     return outputs
 
-def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4):
+def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
     inputs = ""
     inputs += 'LIB "freegb.lib";' #lib
     inputs += "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type) #ring_decl
@@ -91,7 +91,20 @@ def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_or
         if outputs[i][-2:] == ']:':
             gb.append(outputs[i + 1])
     gb = list(map(str.strip, gb))
-    return gb
+    if not hilbert:
+        return gb
+    inputs = 'LIB "fpadim.lib";'
+    inputs += "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type) #ring_decl
+    inputs += "int d = %d;" % (max_order) #deg_bound
+    inputs += "def R = makeLetterplaceRing(d);" #def_ringR
+    inputs += "setring R;" #set_ringR
+    inputs += "ideal i = %s;" % (','.join(new_ideal)) #ideal_decl
+    inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
+    inputs += "lpDHilbert(J);" #calculate hlbert series
+    result = subprocess.run('Singular', stdout=subprocess.PIPE, input=str.encode(inputs))
+    hs = result.stdout.decode('utf-8').split('\n')[-4: -1]
+    logger.debug(hs)
+    return gb, hs
 
 
 
