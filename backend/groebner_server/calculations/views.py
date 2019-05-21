@@ -4,6 +4,7 @@ import json
 
 import pipes
 import calculations.calc_functions as calcs
+import calculations.utils as utils
 
 import logging
 import sys
@@ -19,8 +20,22 @@ def submit_calculation(request):
     if request.method == 'POST' and request.content_type == 'application/json': #probably received a calculation to be done
         data = json.loads(request.body)
         data['characteristic'] = int(data['characteristic'])
-        data['vars'] = list(filter(lambda x: x != '', map(str.strip, data['vars'].split(';'))))
-        data['basis'] = list(filter(lambda x: x != '', map(str.strip, data['basis'].split(';'))))
+        data['vars'] = list(filter(
+                            lambda x: x != '',
+                            map(
+                                lambda x: x.replace(' ', '').strip(),
+                                # data['vars'].split(';')
+                                utils.SEPARATOR_REGEX.split(data['vars'])
+                               )
+                           ))
+        data['basis'] = list(filter(
+                             lambda x: x != '',
+                             map(
+                                 lambda x: x.replace(' ', '').strip(),
+                                 # data['basis'].split(';')
+                                 utils.SEPARATOR_REGEX.split(data['basis'])
+                                )
+                            ))
         data['max_degree'] = int(data['max_degree'])
         data['hilbert'] = (data['hilbert'] == 1)
         logger.debug(data)
@@ -41,14 +56,18 @@ def submit_calculation(request):
                                                                     data['vars'], data['basis'],
                                                                     max_order=data['max_degree'],
                                                                     hilbert=(data['hilbert'] == 1))
+        response = HttpResponse()
+        response['basis'] = '<br>'.join(calc_res[0][:utils.MAX_BASIS_LINES])
+        if data['hilbert']:
+            response['hilbert'] = '<br>'.join(calc_res[1])
+
         if not data['hilbert']:
             calc_res = '\n'.join(calc_res)
         else:
             calc_res = 'Groebner basis:\n' + '\n'.join(calc_res[0]) + '\nHilbert series\n' + '\n'.join(calc_res[1])
-        send_mail('groebner basis calculation results',\
-                  calc_res,
-                  'groebner@calc.edu',
-                  [data['email']])
-
-
-    return HttpResponse("Hello, world.")
+        if data['email']:
+            send_mail('groebner basis calculation results',\
+                      calc_res,
+                      'groebner@calc.edu',
+                      [data['email']])
+    return response

@@ -8,6 +8,46 @@ import re
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+def insert_multiplication(ideals, variables):
+    def is_operation(x):
+        return x in ['-', '*', '+', '^']
+
+    sorted_vars = sorted(variables, key=lambda x: -len(x))
+    new_ideals = []
+    for ideal in ideals:
+        cur_pos = 0
+        var_pos = []
+        variable_found = True
+        while variable_found:
+            variable_found = False
+            best_varpos = (len(ideal), None)
+            logger.debug("left to parse: %s" % ideal[cur_pos:])
+            for num, var in enumerate(sorted_vars):
+                curvar_pos = ideal[cur_pos:].find(var)
+                if (curvar_pos != -1):
+                    curvar_pos += cur_pos
+                    if (curvar_pos < best_varpos[0]):
+                        best_varpos = (curvar_pos, num)
+                        variable_found = True
+            if (variable_found):
+                cur_pos = best_varpos[0] + len(sorted_vars[best_varpos[1]])
+                logger.debug("found variable %s at %d" % (sorted_vars[best_varpos[1]], best_varpos[0]))
+                var_pos.append(best_varpos)
+        new_ideal = ""
+        prev_end = 0
+        logger.debug(var_pos)
+        for i in range(len(var_pos) - 1):
+            pos, var = var_pos[i]
+            pos_next, var_next = var_pos[i + 1]
+            new_ideal += ideal[prev_end: pos + len(sorted_vars[var])]
+            if (pos + len(sorted_vars[var]) == pos_next):
+                new_ideal += '*'
+            prev_end = pos + len(sorted_vars[var])
+        new_ideal += ideal[prev_end:]
+        logger.debug('ideal was %s now is %s' % (ideal, new_ideal))
+        new_ideals.append(new_ideal)
+    return new_ideals
+
 
 def convert_to_letterplace(ideals, variables):
     ideal_letplace = []
@@ -78,7 +118,8 @@ def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_or
     inputs += "int d = %d;" % (max_order) #deg_bound
     inputs += "def R = makeLetterplaceRing(d);" #def_ringR
     inputs += "setring R;" #set_ringR
-    new_ideal = convert_to_letterplace(power_to_multiplication(ideal, variables), variables)
+    new_ideal = insert_multiplication(ideal, variables)
+    new_ideal = convert_to_letterplace(power_to_multiplication(new_ideal, variables), variables)
     inputs += "ideal i = %s;" % (','.join(new_ideal)) #ideal_decl
     inputs += "option(redSB); option(redTail);" #options
     inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace

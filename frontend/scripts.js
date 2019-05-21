@@ -5,6 +5,7 @@ function init() {
 
     $('#order_type').attr('onchange', 'check_orders();');
     $('#calc_inputs').attr('onsubmit', 'send_data(); return false;');
+    set_maxdeg_field();
 }
 
 function set_maxdeg_field() {
@@ -59,5 +60,6 @@ function send_data() {
           // console.log(result);
       }
     });
+    $('#computation_noify').html('Computation has begun')
     console.log(post_str);
 }
