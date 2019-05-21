@@ -36,20 +36,19 @@ def submit_calculation(request):
                                  utils.SEPARATOR_REGEX.split(data['basis'])
                                 )
                             ))
-        data['max_degree'] = int(data['max_degree'])
         data['hilbert'] = (data['hilbert'] == 1)
         logger.debug(data)
         calc_res = ''
         if data['request'] == 'commutative_groebner':
             logger.debug('calcing commutative groebner')
-            calc_res = '\n'.join(
-                    calcs.get_groebner_basis_commut(
-                        data['characteristic'],
-                        data['vars'],
-                        data['basis']
+            calc_res =  calcs.get_groebner_basis_commut(
+                            data['characteristic'],
+                            data['vars'],
+                            data['basis']
                         )
                     )
         elif data['request'] == 'noncommutative_groebner':
+            data['max_degree'] = int(data['max_degree'])
             logger.debug('calcing noncommutative groebner')
             #data['max_order'] = int(data['max_order'])
         calc_res = calcs.get_groebner_basis_noncommut(data['characteristic'],
@@ -62,7 +61,7 @@ def submit_calculation(request):
             response['hilbert'] = '<br>'.join(calc_res[1])
 
         if not data['hilbert']:
-            calc_res = '\n'.join(calc_res)
+            calc_res = '\n'.join(calc_res[0])
         else:
             calc_res = 'Groebner basis:\n' + '\n'.join(calc_res[0]) + '\nHilbert series\n' + '\n'.join(calc_res[1])
         if data['email']:
