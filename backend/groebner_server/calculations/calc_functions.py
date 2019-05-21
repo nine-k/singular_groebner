@@ -100,16 +100,22 @@ def power_to_multiplication(ideals, variables):
     return parsed_ideals
 
 
-def get_groebner_basis_commut(char, variables, ideal, order_type='dp'):
+def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type='dp'):
     #inputs = open(file_name, 'w')
     ring_decl = "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type)
     ideal_decl = "ideal i = %s;" % (','.join(ideal))
-    groebner_decl = "groebner(i);"
+    if not hilbert:
+        groebner_decl = "groebner(i);"
+    else:
+        groebner_decl = "ideal new_i = groebner(i); new_i; hilb(new_i);"
     inputs = "%s%s%s" % (ring_decl, ideal_decl, groebner_decl)
     result = subprocess.run('Singular', stdout=subprocess.PIPE, input=str.encode(inputs))
     outputs = result.stdout.decode('utf-8').split('\n')
-    outputs = list(filter(lambda x: len(x) > 0 and x[0] == '_', outputs))
-    return outputs
+    gb = list(filter(lambda x: len(x) > 0 and x[0] == '_', outputs))
+    hs = None
+    if hilbert:
+        hs = list(filter(lambda x: len(x) > 0 and x[0] == '/', outputs))
+    return gb, hs
 
 def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
     inputs = ""
@@ -133,7 +139,7 @@ def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_or
             gb.append(outputs[i + 1])
     gb = list(map(str.strip, gb))
     if not hilbert:
-        return gb
+        return gb, None
     inputs = 'LIB "fpadim.lib";'
     inputs += "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type) #ring_decl
     inputs += "int d = %d;" % (max_order) #deg_bound
