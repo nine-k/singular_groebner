@@ -50,7 +50,7 @@ function send_data() {
     var post_str = JSON.stringify(message);
     // $.post('http://127.0.0.1:8000/calculations/submit_calculation', post_str, function(data) {}, 'json');
     $.ajax({
-      url:'http://127.0.0.1:8000/calculations/submit_calculation',
+      url:'http://165.22.70.250:8000/calculations/submit_calculation',
       type:"POST",
       data: post_str,
       contentType:"application/json",
