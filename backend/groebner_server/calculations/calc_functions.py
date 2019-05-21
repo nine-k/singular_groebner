@@ -105,16 +105,20 @@ def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type=
     ring_decl = "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type)
     ideal_decl = "ideal i = %s;" % (','.join(ideal))
     if not hilbert:
-        groebner_decl = "groebner(i);"
+        groebner_decl = "ideal i = groebner(i); i;"
     else:
-        groebner_decl = "ideal new_i = groebner(i); new_i; hilb(new_i);"
+        groebner_decl = "i = groebner(i); i; hilb(i);"
     inputs = "%s%s%s" % (ring_decl, ideal_decl, groebner_decl)
     result = subprocess.run('Singular', stdout=subprocess.PIPE, input=str.encode(inputs))
     outputs = result.stdout.decode('utf-8').split('\n')
-    gb = list(filter(lambda x: len(x) > 0 and x[0] == '_', outputs))
+    gb = list(filter(lambda x: len(x) > 0 and x[:2] == 'i[', outputs))
+    gb = list(map(lambda x: x[1:], gb))
+
     hs = None
     if hilbert:
-        hs = list(filter(lambda x: len(x) > 0 and x[0] == '/', outputs))
+        hs = list(filter(lambda x: len(x) > 0 and x[0] == '/' or len(x) == 0, outputs))
+        stop_pos = hs.index('')
+        hs = hs[:stop_pos]
     return gb, hs
 
 def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):

@@ -44,17 +44,17 @@ def submit_calculation(request):
             calc_res =  calcs.get_groebner_basis_commut(
                             data['characteristic'],
                             data['vars'],
-                            data['basis']
+                            data['basis'],
+                            hilbert=(data['hilbert']==1)
                         )
-                    )
         elif data['request'] == 'noncommutative_groebner':
             data['max_degree'] = int(data['max_degree'])
             logger.debug('calcing noncommutative groebner')
             #data['max_order'] = int(data['max_order'])
-        calc_res = calcs.get_groebner_basis_noncommut(data['characteristic'],
-                                                                    data['vars'], data['basis'],
-                                                                    max_order=data['max_degree'],
-                                                                    hilbert=(data['hilbert'] == 1))
+            calc_res = calcs.get_groebner_basis_noncommut(data['characteristic'],
+                                                                        data['vars'], data['basis'],
+                                                                        max_order=data['max_degree'],
+                                                                        hilbert=(data['hilbert'] == 1))
         response = HttpResponse()
         response['basis'] = '<br>'.join(calc_res[0][:utils.MAX_BASIS_LINES])
         if data['hilbert']:
