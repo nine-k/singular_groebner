@@ -56,7 +56,7 @@ function send_data() {
       contentType:"application/json",
       dataType:"json",
       success: function(result){
-          console.log('a');
+          console.log(result);
           // console.log(result);
       }
     });
