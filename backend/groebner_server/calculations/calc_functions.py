@@ -105,7 +105,7 @@ def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type=
     ring_decl = "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type)
     ideal_decl = "ideal i = %s;" % (','.join(ideal))
     if not hilbert:
-        groebner_decl = "ideal i = groebner(i); i;"
+        groebner_decl = "i = groebner(i); i;"
     else:
         groebner_decl = "i = groebner(i); i; hilb(i);"
     inputs = "%s%s%s" % (ring_decl, ideal_decl, groebner_decl)
