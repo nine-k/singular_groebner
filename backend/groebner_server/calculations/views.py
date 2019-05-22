@@ -57,6 +57,9 @@ def do_calculation(data):
                                                                     hilbert=(data['hilbert'] == 1))
     response = dict()
     response['basis'] = '<br>'.join(calc_res[0][:utils.MAX_BASIS_LINES])
+    response['code'] = calc_res[2]
+    response['time'] = calc_res[3]
+    response['hilbert'] = ''
     if data['hilbert']:
         response['hilbert'] = '<br>'.join(calc_res[1])
 

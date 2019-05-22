@@ -101,14 +101,16 @@ def power_to_multiplication(ideals, variables):
 def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type='dp'):
     #inputs = open(file_name, 'w')
     ring_decl = "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type)
-    ideal = insert_multiplication(ideal, variables)
-    ideal_decl = "ideal i = %s;" % (','.join(ideal))
+    new_ideal = power_to_multiplication(ideal, variables)
+    new_ideal = insert_multiplication(new_ideal, variables)
+    ideal_decl = "ideal i = %s;" % (','.join(new_ideal))
     if not hilbert:
         groebner_decl = "i = groebner(i); i;"
     else:
         groebner_decl = "i = groebner(i); i; hilb(i);"
     inputs = "%s%s%s" % (ring_decl, ideal_decl, groebner_decl)
-    result = subprocess.run('Singular', stdout=subprocess.PIPE, input=str.encode(inputs))
+    result = subprocess.run(['time', 'Singular'], stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    time = str(result.stderr.decode('utf-8')).split(' ')[1]
     outputs = result.stdout.decode('utf-8').split('\n')
     gb = list(filter(lambda x: len(x) > 0 and x[:2] == 'i[', outputs))
     gb = list(map(lambda x: x[1:], gb))
@@ -118,7 +120,7 @@ def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type=
         hs = list(filter(lambda x: len(x) > 0 and x[0] == '/' or len(x) == 0, outputs))
         stop_pos = hs.index('')
         hs = hs[:stop_pos]
-    return gb, hs
+    return gb, hs, inputs.replace(';', ';<br>'), time
 
 def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
     inputs = ""
@@ -135,27 +137,32 @@ def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_or
     inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
     inputs += "lp2lstr(J, r); setring r; lst2str(@LN, 1);" #convert_to_strings
     logger.debug(';\n'.join(inputs.split(';')))
-    result = subprocess.run('Singular', stdout=subprocess.PIPE, input=str.encode(inputs))
+
+    result = subprocess.run(['time', 'Singular'], stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    time = str(result.stderr.decode('utf-8')).split(' ')[1]
     outputs = result.stdout.decode('utf-8').split('\n')
+
     gb = []
     for i in range(len(outputs)):
         if outputs[i][-2:] == ']:':
             gb.append(outputs[i + 1])
     gb = list(map(str.strip, gb))
-    if not hilbert:
-        return gb, None
-    inputs = 'LIB "fpadim.lib";'
-    inputs += "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type) #ring_decl
-    inputs += "int d = %d;" % (max_order) #deg_bound
-    inputs += "def R = makeLetterplaceRing(d);" #def_ringR
-    inputs += "setring R;" #set_ringR
-    inputs += "ideal i = %s;" % (','.join(new_ideal)) #ideal_decl
-    inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
-    inputs += "lpDHilbert(J);" #calculate hlbert series
-    result = subprocess.run('Singular', stdout=subprocess.PIPE, input=str.encode(inputs))
-    hs = result.stdout.decode('utf-8').split('\n')[-4: -1]
-    logger.debug(hs)
-    return gb, hs
+    hs = None
+    if hilbert:
+        inputs = 'LIB "fpadim.lib";'
+        inputs += "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type) #ring_decl
+        inputs += "int d = %d;" % (max_order) #deg_bound
+        inputs += "def R = makeLetterplaceRing(d);" #def_ringR
+        inputs += "setring R;" #set_ringR
+        inputs += "ideal i = %s;" % (','.join(new_ideal)) #ideal_decl
+        inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
+        inputs += "lpDHilbert(J);" #calculate hlbert series
+        result = subprocess.run(['time', 'Singular'], stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+        hs = result.stdout.decode('utf-8').split('\n')[-4: -1][1:2]
+        time = str(result.stderr.decode('utf-8')).split(' ')[1]
+        logger.debug(hs)
+
+    return gb, hs, inputs.replace(';', ';<br>'), time
 
 
 

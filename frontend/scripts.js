@@ -6,19 +6,15 @@ function init() {
     $('#order_type').attr('onchange', 'check_orders();');
     $('#calc_inputs').attr('onsubmit', 'send_data(); return false;');
     set_maxdeg_field();
-    clear_results();
+    // clear_results();
 }
 
 function clear_results() {
-    $('#results_list').style.display = "none";
-    var tablinks = document.getElementsByClassName("tablinks")
-    for (i = 0; i < tablinks.length; i++) {
-            tabcontent = document.getElementsByClassName("tabcontent");
-            for (i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].style.display = "none"
-        }
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+	tabcontent[i].style.display = "none"
     }
-
+    // $('#results_list').style.display = "none";
 }
 
 function set_maxdeg_field() {
@@ -84,9 +80,12 @@ function send_data() {
       contentType:"application/json",
       dataType:"json",
       success: function(result){
-	  $('#computation_notify').html(result.basis + '<br><br>' + result.hilbert);
-	  $('#Basis_info').html(result.basis);
-	  $('#Hilbert_info').html(result.hilbert);
+	  $('#computation_notify').html('Done!');
+	  $('#Basis_info').html('<p>' + '<br>' + result.basis + '</p>');
+	  $('#Hilbert_info').html('<p>' + '<br>' + result.hilbert + '</p>');
+	  $('#Info_info').html('<p>' +
+		  '<br>Code:<br>' + result.code +
+		  '<br>Time:<br>' + result.time + '</p>');
 	  // parsed = JSON.parse(result);
           console.log(result.basis);
       }
