@@ -49,6 +49,7 @@ function send_data() {
 
     var post_str = JSON.stringify(message);
     // $.post('http://127.0.0.1:8000/calculations/submit_calculation', post_str, function(data) {}, 'json');
+    $('#computation_noify').html('Computation started')
     $.ajax({
       url:'http://165.22.70.250:8000/calculations/submit_calculation',
       type:"POST",
@@ -56,10 +57,10 @@ function send_data() {
       contentType:"application/json",
       dataType:"json",
       success: function(result){
-          console.log(result);
-          // console.log(result);
+	  $('#computation_noify').html(result.basis + '<br><br>' + result.hilbert);
+	  // parsed = JSON.parse(result);
+          console.log(result.basis);
       }
     });
-    $('#computation_noify').html('Computation has begun')
     console.log(post_str);
 }

@@ -60,7 +60,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django': {
+        '': {
             'handlers': ['file'],
             'level': 'DEBUG',
             'propagate': True,
@@ -144,7 +144,12 @@ USE_L10N = True
 USE_TZ = True
 
 CORS_ORIGIN_ALLOW_ALL = True
-
+'''
+COSR_ORIGIN_WHITELIST = [
+        "165.22.70.250:8000*",
+        "165.22.70.250:80*",
+]
+'''
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/

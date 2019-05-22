@@ -39,7 +39,6 @@ def do_calculation(data):
                         ))
     data['hilbert'] = (data['hilbert'] == 1)
     logger.debug(data)
-    calc_res = ''
     if data['request'] == 'commutative_groebner':
         logger.debug('calcing commutative groebner')
         calc_res =  calcs.get_groebner_basis_commut(
@@ -56,7 +55,7 @@ def do_calculation(data):
                                                                     data['vars'], data['basis'],
                                                                     max_order=data['max_degree'],
                                                                     hilbert=(data['hilbert'] == 1))
-    response = HttpResponse()
+    response = dict()
     response['basis'] = '<br>'.join(calc_res[0][:utils.MAX_BASIS_LINES])
     if data['hilbert']:
         response['hilbert'] = '<br>'.join(calc_res[1])
@@ -70,10 +69,16 @@ def do_calculation(data):
                   calc_res,
                   'groebner@calc.edu',
                   [data['email']])
+    return response
 
 def submit_calculation(request):
     if request.method == 'POST' and request.content_type == 'application/json': #probably received a calculation to be done
         data = json.loads(request.body)
-        do_calculation.delay(data)
-        return HttpResponse(code=202)
+        calculation_results = do_calculation(data)
+        response = HttpResponse(json.dumps(calculation_results).encode('utf-8'))
+#        response.content = 
+        response.status_code = 200
+        response['Access-Control-Allow-Origin'] = '165.22.70.250:80'
+        return response
+        
     return HttpResponse(code=442)

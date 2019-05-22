@@ -6,7 +6,7 @@ import logging
 import re
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 
 def insert_multiplication(ideals, variables):
     def is_operation(x):
@@ -103,6 +103,7 @@ def power_to_multiplication(ideals, variables):
 def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type='dp'):
     #inputs = open(file_name, 'w')
     ring_decl = "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type)
+    ideal = insert_multiplication(ideal, variables)
     ideal_decl = "ideal i = %s;" % (','.join(ideal))
     if not hilbert:
         groebner_decl = "i = groebner(i); i;"
