@@ -58,7 +58,17 @@
 
         <input type="submit" id="send" value="Calculate">
     </form>
-    <div id="computation_noify"></div>
+    <div id="computation_notify"></div>
+    <br>
+    <div id="results_list" class="tab">
+        <button class="tablinks" onclick="openData(event, 'Basis_info')">Basis</button>
+        <button class="tablinks" onClick="openData(event, 'Hilbert_info')">Hilbert series</button>
+        <button class="tablinks" onClick="openData(event, 'Info_info')">Info</button>
+    </div>
+
+    <div id="Basis_info" class="tabcontent"><p>1</p></div>
+    <div id="Hilbert_info" class="tabcontent"><p>2</p></div>
+    <div id="Info_info" class="tabcontent"><p>3</p></div>
     <script>init();</script>
 </body>
 </html>

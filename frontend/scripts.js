@@ -6,6 +6,19 @@ function init() {
     $('#order_type').attr('onchange', 'check_orders();');
     $('#calc_inputs').attr('onsubmit', 'send_data(); return false;');
     set_maxdeg_field();
+    clear_results();
+}
+
+function clear_results() {
+    $('#results_list').style.display = "none";
+    var tablinks = document.getElementsByClassName("tablinks")
+    for (i = 0; i < tablinks.length; i++) {
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none"
+        }
+    }
+
 }
 
 function set_maxdeg_field() {
@@ -24,11 +37,25 @@ function assert_characteristic() {
     $('#characteristic_correct').html('<span class="positive"> \✓<\span>');
 }
 
+function openData(evt, tabname) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none"
+    }
+    tablinks = document.getElementsByClassName("tablinks")
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabname).style.display = "block";
+    evt.currentTarget.className += " active"
+}
 function check_orders() {
 
 }
 
 function send_data() {
+    clear_results();
     var message = Object();
     message.characteristic = $('#characteristic').val();
     message.vars = $('#vars').val();
@@ -49,7 +76,7 @@ function send_data() {
 
     var post_str = JSON.stringify(message);
     // $.post('http://127.0.0.1:8000/calculations/submit_calculation', post_str, function(data) {}, 'json');
-    $('#computation_noify').html('Computation started')
+    $('#computation_notify').html('Computation started')
     $.ajax({
       url:'http://165.22.70.250:8000/calculations/submit_calculation',
       type:"POST",
@@ -57,7 +84,9 @@ function send_data() {
       contentType:"application/json",
       dataType:"json",
       success: function(result){
-	  $('#computation_noify').html(result.basis + '<br><br>' + result.hilbert);
+	  $('#computation_notify').html(result.basis + '<br><br>' + result.hilbert);
+	  $('#Basis_info').html(result.basis);
+	  $('#Hilbert_info').html(result.hilbert);
 	  // parsed = JSON.parse(result);
           console.log(result.basis);
       }
