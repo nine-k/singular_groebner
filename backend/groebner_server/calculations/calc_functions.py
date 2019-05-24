@@ -99,72 +99,87 @@ def power_to_multiplication(ideals, variables):
     return parsed_ideals
 
 
-def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type='dp'):
-    #inputs = open(file_name, 'w')
+# Generates code to be ran in Singular for the commutative case
+def generate_singular_commut(char, variables, ideal, hilbert=False, order_type='dp'):
     ring_decl = "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type)
-    new_ideal = power_to_multiplication(ideal, variables)
-    new_ideal = insert_multiplication(new_ideal, variables)
     ideal_decl = "ideal i = %s;" % (','.join(new_ideal))
     if not hilbert:
         groebner_decl = "i = groebner(i); i;"
     else:
         groebner_decl = "i = groebner(i); i; hilb(i);"
     inputs = "%s%s%s" % (ring_decl, ideal_decl, groebner_decl)
-    result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
-                            stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
-    time = str(result.stderr.decode('utf-8')).split(' ')[1]
-    outputs = result.stdout.decode('utf-8').split('\n')
-    gb = list(filter(lambda x: len(x) > 0 and x[:2] == 'i[', outputs))
+    return inputs
+
+
+# Parse the output of singular for the commutative case
+def parse_singular_commut(data, hilbert=False):
+    gb = list(filter(lambda x: len(x) > 0 and x[:2] == 'i[', data))
     gb = list(map(lambda x: x[1:], gb))
 
     hs = None
     if hilbert:
-        hs = list(filter(lambda x: len(x) > 0 and x[0] == '/' or len(x) == 0, outputs))
+        hs = list(filter(lambda x: len(x) > 0 and x[0] == '/' or len(x) == 0, data))
         stop_pos = hs.index('')
         hs = hs[:stop_pos]
+    return gb, hs
+
+def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type='dp'):
+    new_ideal = power_to_multiplication(ideal, variables)
+    new_ideal = insert_multiplication(new_ideal, variables)
+
+    inputs = generate_singular_commut(char, variables, new_ideal, hilbert, order_type)
+    result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
+                            stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+
+    time = str(result.stderr.decode('utf-8')).split(' ')[1]
+    outputs = result.stdout.decode('utf-8').split('\n')
+    gb, hs = parse_singular_commut(data, hilbert)
+
     return gb, hs, inputs.replace(';', ';<br>'), time
 
-def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
-    inputs = ""
-    inputs += 'LIB "freegb.lib";' #lib
+
+def parse_singular_noncommut(data, hilbert=False):
+    hs = None
+    hs_regex = re.compile(r'^\[2\]')
+    if hilbert:
+        for i in range(len(data)):
+            if hs_regex.match(data[i]):
+                hs = [data[i + 1]]
+                data = data[i + 2:]
+                break
+    gb = []
+    gb_regex = re.compile(r'^\[[0-9]+\]')
+    for i in range(len(data)):
+        if gb_regex.match(data[i]):
+            gb.append(data[i + 1])
+    gb = list(map(str.strip, gb))
+    return gb, hs
+
+def generate_singular_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+    inputs = 'LIB "fpadim.lib";'
     inputs += "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type) #ring_decl
     inputs += "int d = %d;" % (max_order) #deg_bound
     inputs += "def R = makeLetterplaceRing(d);" #def_ringR
     inputs += "setring R;" #set_ringR
+    inputs += "ideal i = %s;" % (','.join(ideal)) #ideal_decl
+    inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
+    if hilbert:
+        inputs += "lpDHilbert(J);" #calculate hlbert series
+    inputs += "lp2lstr(J, r); setring r; lst2str(@LN, 1);" #convert_to_strings
+    return inputs
+
+
+def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+    hs = None
     new_ideal = power_to_multiplication(ideal, variables)
     new_ideal = insert_multiplication(new_ideal, variables)
     new_ideal = convert_to_letterplace(new_ideal, variables)
-    inputs += "ideal i = %s;" % (','.join(new_ideal)) #ideal_decl
-    inputs += "option(redSB); option(redTail);" #options
-    inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
-    inputs += "lp2lstr(J, r); setring r; lst2str(@LN, 1);" #convert_to_strings
-    logger.debug(';\n'.join(inputs.split(';')))
-
+    inputs = generate_singular_noncommut(char, variables, new_ideal, order_type, max_order, hilbert)
     result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
                             stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
-    time = str(result.stderr.decode('utf-8')).split(' ')[1]
     outputs = result.stdout.decode('utf-8').split('\n')
-
-    gb = []
-    for i in range(len(outputs)):
-        if outputs[i][-2:] == ']:':
-            gb.append(outputs[i + 1])
-    gb = list(map(str.strip, gb))
-    hs = None
-    if hilbert:
-        inputs = 'LIB "fpadim.lib";'
-        inputs += "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type) #ring_decl
-        inputs += "int d = %d;" % (max_order) #deg_bound
-        inputs += "def R = makeLetterplaceRing(d);" #def_ringR
-        inputs += "setring R;" #set_ringR
-        inputs += "ideal i = %s;" % (','.join(new_ideal)) #ideal_decl
-        inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
-        inputs += "lpDHilbert(J);" #calculate hlbert series
-        result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
-                                stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
-        hs = result.stdout.decode('utf-8').split('\n')[-4: -1][1:2]
-        time = str(result.stderr.decode('utf-8')).split(' ')[1]
-        logger.debug(hs)
+    time = str(result.stderr.decode('utf-8')).split(' ')[1]
+    gb, hs = parse_singular_noncommut(outputs, hilbert)
 
     return gb, hs, inputs.replace(';', ';<br>'), time
 
