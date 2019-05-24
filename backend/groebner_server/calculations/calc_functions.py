@@ -4,6 +4,7 @@ import subprocess
 import logging
 
 import re
+import calculations.utils as utils
 
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
@@ -109,7 +110,8 @@ def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type=
     else:
         groebner_decl = "i = groebner(i); i; hilb(i);"
     inputs = "%s%s%s" % (ring_decl, ideal_decl, groebner_decl)
-    result = subprocess.run(['time', 'Singular'], stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
+                            stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
     time = str(result.stderr.decode('utf-8')).split(' ')[1]
     outputs = result.stdout.decode('utf-8').split('\n')
     gb = list(filter(lambda x: len(x) > 0 and x[:2] == 'i[', outputs))
@@ -138,7 +140,8 @@ def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_or
     inputs += "lp2lstr(J, r); setring r; lst2str(@LN, 1);" #convert_to_strings
     logger.debug(';\n'.join(inputs.split(';')))
 
-    result = subprocess.run(['time', 'Singular'], stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
+                            stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
     time = str(result.stderr.decode('utf-8')).split(' ')[1]
     outputs = result.stdout.decode('utf-8').split('\n')
 
@@ -157,7 +160,8 @@ def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_or
         inputs += "ideal i = %s;" % (','.join(new_ideal)) #ideal_decl
         inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
         inputs += "lpDHilbert(J);" #calculate hlbert series
-        result = subprocess.run(['time', 'Singular'], stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+        result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
+                                stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
         hs = result.stdout.decode('utf-8').split('\n')[-4: -1][1:2]
         time = str(result.stderr.decode('utf-8')).split(' ')[1]
         logger.debug(hs)

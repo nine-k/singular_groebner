@@ -51,7 +51,7 @@ function check_orders() {
 }
 
 function send_data() {
-    clear_results();
+    // clear_results();
     var message = Object();
     message.characteristic = $('#characteristic').val();
     message.vars = $('#vars').val();
