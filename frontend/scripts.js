@@ -58,11 +58,20 @@ function send_data() {
     message.basis = $('#basis').val();
     message.order_type = $('#order_type').val();
     message.email = $('#res_email').val();
-    if ($('#commutative').is(":checked")) {
-        message.request = 'noncommutative_groebner';
-        message.max_degree = $('#max_deg_input').val()
+    if ($('#use_bergman').is(":checked")) {
+        message.platform = 'bergman';
     } else {
-        message.request = 'commutative_groebner';
+        console.log('use singular');
+        message.platform = 'singular';
+    }
+    if ($('#commutative').is(":checked")) {
+        console.log('non commut');
+        message.request = 'noncommutative';
+        message.max_degree = $('#max_deg_input').val();
+    } else {
+        console.log('commut');
+        message.request = 'commutative';
+        message.max_degree = 0;
     }
     if ($('#hilbert').is(":checked")) {
         message.hilbert = 1;
@@ -87,8 +96,11 @@ function send_data() {
 		  '<br>Code:<br>' + result.code +
 		  '<br>Time:<br>' + result.time + '</p>');
 	  // parsed = JSON.parse(result);
-          console.log(result.basis);
-      }
+      },
+      error: function(result) {
+	  $('#computation_notify').html('Incorrect input');
+      },
+      timeout: 5 * 60 * 1000, // max waiting time is 5 minutes
     });
     console.log(post_str);
 }

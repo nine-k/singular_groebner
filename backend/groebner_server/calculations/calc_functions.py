@@ -98,11 +98,29 @@ def power_to_multiplication(ideals, variables):
         parsed_ideals.append(parsed_ideal)
     return parsed_ideals
 
+def condense_to_power(x):
+    res = ''
+    logger.debug('had %s' % x)
+    x = x.split('*')
+    prev = x[0]
+    x += '*42'
+    counter = 1
+    for cur in x[1:]:
+        if (cur == prev):
+            counter += 1
+        else:
+            res += prev + '^%d' % (counter) if counter > 1 else ''
+            counter = 1
+        prev = cur
+    logger.debug('condensed to %s' % (res))
+    return res
+
+
 
 # Generates code to be ran in Singular for the commutative case
 def generate_singular_commut(char, variables, ideal, hilbert=False, order_type='dp'):
     ring_decl = "ring r = %d, (%s), %s;" % (char, ','.join(variables), order_type)
-    ideal_decl = "ideal i = %s;" % (','.join(new_ideal))
+    ideal_decl = "ideal i = %s;" % (','.join(ideal))
     if not hilbert:
         groebner_decl = "i = groebner(i); i;"
     else:
@@ -123,7 +141,8 @@ def parse_singular_commut(data, hilbert=False):
         hs = hs[:stop_pos]
     return gb, hs
 
-def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type='dp'):
+def get_groebner_basis_commut_singular(char, variables, ideal, hilbert=False, order_type='dp', max_order=4):
+    logger.debug('calculating commutative basis with singular')
     new_ideal = power_to_multiplication(ideal, variables)
     new_ideal = insert_multiplication(new_ideal, variables)
 
@@ -133,8 +152,15 @@ def get_groebner_basis_commut(char, variables, ideal, hilbert=False, order_type=
 
     time = str(result.stderr.decode('utf-8')).split(' ')[1]
     outputs = result.stdout.decode('utf-8').split('\n')
-    gb, hs = parse_singular_commut(data, hilbert)
-
+    time = '-1'
+    if result.returncode != 0:
+        logger.debug('time out')
+        gb = ['Calculation Timed Out']
+        hs = ['Calculation Timed Out']
+    else:
+        time = str(result.stderr.decode('utf-8')).split(' ')[1]
+        outputs = result.stdout.decode('utf-8').split('\n')
+        gb, hs = parse_singular_commut(outputs, hilbert)
     return gb, hs, inputs.replace(';', ';<br>'), time
 
 
@@ -151,7 +177,7 @@ def parse_singular_noncommut(data, hilbert=False):
     gb_regex = re.compile(r'^\[[0-9]+\]')
     for i in range(len(data)):
         if gb_regex.match(data[i]):
-            gb.append(data[i + 1])
+            gb.append(condense_to_power(data[i + 1]))
     gb = list(map(str.strip, gb))
     return gb, hs
 
@@ -162,6 +188,7 @@ def generate_singular_noncommut(char, variables, ideal, order_type='dp', max_ord
     inputs += "def R = makeLetterplaceRing(d);" #def_ringR
     inputs += "setring R;" #set_ringR
     inputs += "ideal i = %s;" % (','.join(ideal)) #ideal_decl
+    inputs += 'option(redSB); option(redTail);'
     inputs += "ideal J = letplaceGBasis(i);" #ideal_letplace
     if hilbert:
         inputs += "lpDHilbert(J);" #calculate hlbert series
@@ -169,21 +196,108 @@ def generate_singular_noncommut(char, variables, ideal, order_type='dp', max_ord
     return inputs
 
 
-def get_groebner_basis_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+def get_groebner_basis_noncommut_singular(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+    logger.debug('calculating noncommutative basis with singular')
     hs = None
     new_ideal = power_to_multiplication(ideal, variables)
     new_ideal = insert_multiplication(new_ideal, variables)
     new_ideal = convert_to_letterplace(new_ideal, variables)
     inputs = generate_singular_noncommut(char, variables, new_ideal, order_type, max_order, hilbert)
+    logger.debug(inputs)
     result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
                             stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
-    outputs = result.stdout.decode('utf-8').split('\n')
-    time = str(result.stderr.decode('utf-8')).split(' ')[1]
-    gb, hs = parse_singular_noncommut(outputs, hilbert)
+    time = '-1'
+    if result.returncode != 0:
+        logger.debug('time out')
+        gb = ['Calculation Timed Out']
+        hs = ['Calculation Timed Out']
+    else:
+        outputs = result.stdout.decode('utf-8').split('\n')
+        time = str(result.stderr.decode('utf-8')).split(' ')[1]
+        gb, hs = parse_singular_noncommut(outputs, hilbert)
 
     return gb, hs, inputs.replace(';', ';<br>'), time
 
+def parse_bergman(data):
+    hs = ['not implemented']
+    gb = []
+    reading_gb = False
+    gb_regex = re.compile(r'% [0-9]+')
+    for line in data:
+        #if gb_regex.match(line):
+        logger.debug('looking @ line %s' % line)
+        if line.find('%') != -1:
+            logger.debug('line matched! %s' % line)
+            reading_gb = True
+            continue
+        if line.find('Done') != -1:
+            break
+        if reading_gb:
+            gb.append(line.strip())
+    return gb, hs
 
+def generate_bergman_commut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+    inputs = ''
+    inputs += '(setmodulus %d)\n' % (char)
+    inputs += '(simple)\n'
+    inputs += 'vars %s;\n' % (','.join(variables))
+    inputs += "%s;\n" % (','.join(ideal)) #ideal_decl
+    return inputs
+
+def get_groebner_basis_commut_bergman(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+    logger.debug('calculating commutative basis with bergman')
+    new_ideal = power_to_multiplication(ideal, variables)
+    new_ideal = insert_multiplication(new_ideal, variables)
+    inputs = generate_bergman_commut(char, variables, new_ideal, order_type, max_order, hilbert)
+    result = subprocess.run('time %s' % (utils.PATH_TO_BERGMAN),  preexec_fn=utils.limit_fn, shell=True,
+                            stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    time = '-1'
+    if result.returncode != 0:
+        logger.debug('time out')
+        gb = ['Calculation Timed Out']
+        hs = ['Calculation Timed Out']
+    else:
+        outputs = result.stdout.decode('utf-8').split('\n')
+        time = str(result.stderr.decode('utf-8')).split(' ')[1]
+        gb, hs = parse_bergman(outputs)
+    return gb, hs, inputs, time
+
+
+def generate_bergman_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+    inputs = ''
+    inputs += '(noncommify)\n'
+    inputs += '(revlexify)\n'
+    inputs += '(setmaxdeg %d)\n' % (max_order)
+    inputs += '(setmodulus %d)\n' % (char)
+    inputs += '(simple)\n'
+    inputs += 'vars %s;\n' % (','.join(variables))
+    inputs += "%s;\n" % (','.join(ideal)) #ideal_decl
+    return inputs
+
+def get_groebner_basis_noncommut_bergman(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
+    logger.debug('calculating noncommutative basis with bergman')
+    new_ideal = power_to_multiplication(ideal, variables)
+    new_ideal = insert_multiplication(new_ideal, variables)
+    inputs = generate_bergman_noncommut(char, variables, new_ideal, order_type, max_order, hilbert)
+    result = subprocess.run('time %s' % (utils.PATH_TO_BERGMAN),  preexec_fn=utils.limit_fn, shell=True,
+                            stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    time = '-1'
+    if result.returncode != 0:
+        logger.debug('time out')
+        gb = ['Calculation Timed Out']
+        hs = ['Calculation Timed Out']
+    else:
+        outputs = result.stdout.decode('utf-8').split('\n')
+        time = str(result.stderr.decode('utf-8')).split(' ')[1]
+        gb, hs = parse_bergman(outputs)
+    return gb, hs, inputs, time
+
+get_groebner_basis = {
+        ('commutative', 'singular'): get_groebner_basis_commut_singular,
+        ('noncommutative', 'singular'): get_groebner_basis_noncommut_singular,
+        ('commutative', 'bergman'): get_groebner_basis_commut_bergman,
+        ('noncommutative', 'bergman'): get_groebner_basis_noncommut_bergman,
+}
 
 if __name__ == '__main__':
     print(get_groebner_basis_commut(

@@ -39,22 +39,12 @@ def do_calculation(data):
                         ))
     data['hilbert'] = (data['hilbert'] == 1)
     logger.debug(data)
-    if data['request'] == 'commutative_groebner':
-        logger.debug('calcing commutative groebner')
-        calc_res =  calcs.get_groebner_basis_commut(
-                        data['characteristic'],
-                        data['vars'],
-                        data['basis'],
-                        hilbert=(data['hilbert']==1)
-                    )
-    elif data['request'] == 'noncommutative_groebner':
-        data['max_degree'] = int(data['max_degree'])
-        logger.debug('calcing noncommutative groebner')
-        #data['max_order'] = int(data['max_order'])
-        calc_res = calcs.get_groebner_basis_noncommut(data['characteristic'],
-                                                                    data['vars'], data['basis'],
-                                                                    max_order=data['max_degree'],
-                                                                    hilbert=(data['hilbert'] == 1))
+    calc_res = calcs.get_groebner_basis[(data['request'], data['platform'])](data['characteristic'],
+                                                                             data['vars'],
+                                                                             data['basis'],
+                                                                             hilbert=data['hilbert'],
+                                                                             max_order=int(data['max_degree']))
+
     response = dict()
     response['basis'] = '<br>'.join(calc_res[0][:utils.MAX_BASIS_LINES])
     response['code'] = calc_res[2]
@@ -77,11 +67,25 @@ def do_calculation(data):
 def submit_calculation(request):
     if request.method == 'POST' and request.content_type == 'application/json': #probably received a calculation to be done
         data = json.loads(request.body)
+        if not utils.check_content(data):
+            response = HttpResponse()
+            response.status_code = 404
+            return response
         calculation_results = do_calculation(data)
+        '''
+        try:
+            calculation_results = do_calculation(data)
+        except:
+            logger.debug('exception cought')
+            response = HttpResponse()
+            response.status_code = 500
+            return response
+        '''
         response = HttpResponse(json.dumps(calculation_results).encode('utf-8'))
-#        response.content = 
         response.status_code = 200
         response['Access-Control-Allow-Origin'] = '165.22.70.250:80'
         return response
         
-    return HttpResponse(code=442)
+    response = HttpResponse()
+    response.status_code = 404
+    return response
