@@ -71,8 +71,6 @@ def submit_calculation(request):
             response = HttpResponse()
             response.status_code = 404
             return response
-        calculation_results = do_calculation(data)
-        '''
         try:
             calculation_results = do_calculation(data)
         except:
@@ -80,7 +78,6 @@ def submit_calculation(request):
             response = HttpResponse()
             response.status_code = 500
             return response
-        '''
         response = HttpResponse(json.dumps(calculation_results).encode('utf-8'))
         response.status_code = 200
         response['Access-Control-Allow-Origin'] = '165.22.70.250:80'

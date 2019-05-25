@@ -101,19 +101,25 @@ def power_to_multiplication(ideals, variables):
 def condense_to_power(x):
     res = ''
     logger.debug('had %s' % x)
-    x = x.split('*')
-    prev = x[0]
-    x += '*42'
-    counter = 1
-    for cur in x[1:]:
-        if (cur == prev):
-            counter += 1
-        else:
-            res += prev + '^%d' % (counter) if counter > 1 else ''
+    for sub_strp in x.split('+'):
+        for monom in sub_strp.split('-'):
+            monom += '*42'
+            monom = monom.split('*')
+            prev = monom[0]
             counter = 1
-        prev = cur
+            for cur in monom[1:]:
+                if (cur == prev):
+                    counter += 1
+                else:
+                    res += prev + ('^%d * ' % (counter) if counter > 1 else ' * ')
+                    counter = 1
+                prev = cur
+            res = res[:-3]
+            res += ' - '
+        res = res[:-3]
+        res += ' + '
     logger.debug('condensed to %s' % (res))
-    return res
+    return res[:-3]
 
 
 
@@ -177,7 +183,7 @@ def parse_singular_noncommut(data, hilbert=False):
     gb_regex = re.compile(r'^\[[0-9]+\]')
     for i in range(len(data)):
         if gb_regex.match(data[i]):
-            gb.append(condense_to_power(data[i + 1]))
+            gb.append(condense_to_power(data[i + 1].strip()))
     gb = list(map(str.strip, gb))
     return gb, hs
 
@@ -234,6 +240,7 @@ def parse_bergman(data):
             break
         if reading_gb:
             gb.append(line.strip())
+    gb = list(filter(lambda x: len(x) > 0, gb))
     return gb, hs
 
 def generate_bergman_commut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
