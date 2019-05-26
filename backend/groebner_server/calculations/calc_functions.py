@@ -6,6 +6,9 @@ import logging
 import re
 import calculations.utils as utils
 
+import sympy
+from sympy.parsing.sympy_parser import parse_expr
+
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
 
@@ -45,7 +48,6 @@ def insert_multiplication(ideals, variables):
         logger.debug('ideal was %s now is %s' % (ideal, new_ideal))
         new_ideals.append(new_ideal)
     return new_ideals
-
 
 def convert_to_letterplace(ideals, variables):
     ideal_letplace = []
@@ -121,7 +123,82 @@ def condense_to_power(x):
     logger.debug('condensed to %s' % (res))
     return res[:-3]
 
+def insert_multiplication_brackets(ideals):
+    res = []
+    for ideal in ideals:
+        new_ideal = ''
+        # fix all opening brackets
+        prev_pos = 0
+        bracket_pos = ideal.find('(')
+        while bracket_pos != -1:
+            new_ideal += ideal[prev_pos: bracket_pos]
+            if bracket_pos > 0 and ideal[bracket_pos - 1] not in ['(', '+', '-', '*']:
+                new_ideal += '*'
+            prev_pos = bracket_pos
+            bracket_pos = ideal.find('(', prev_pos + 1)
+            logger.debug('brackets %s' % new_ideal)
+        # fix all closing bracket
+        new_ideal += ideal[prev_pos:]
+        ideal = new_ideal
+        new_ideal = ''
+        prev_pos = 0
+        bracket_pos = ideal.find(')')
+        while bracket_pos != -1:
+            new_ideal += ideal[prev_pos: bracket_pos + 1]
+            if bracket_pos + 1 < len(ideal) and ideal[bracket_pos + 1] not in [')', '+', '-', '*']:
+                new_ideal += '*'
+            prev_pos = bracket_pos + 1
+            bracket_pos = ideal.find(')', prev_pos)
+        new_ideal += ideal[prev_pos:]
+        logger.debug('bracket fixing had %s now have %s' % (ideal, new_ideal))
+        res.append(new_ideal)
+    return res
 
+
+def open_brackets(ideal, variables):
+    ideal = insert_multiplication_brackets(ideal)
+    sympy_vars = sympy.symbols(variables, commutative=False)
+    sympy_dict = dict(zip(variables, sympy_vars))
+    res = []
+    for i in ideal:
+        parsed_expr = parse_expr(i, local_dict=sympy_dict, evaluate=False)
+        res.append(str(sympy.expand(parsed_expr)).replace('**', '^').replace('(', '').replace(')', ''))
+        logger.debug('after opening brackets got %s' % res[-1])
+    return res
+
+def open_commutator(expr):
+    first_bracket = expr.find('[')
+    if first_bracket == -1:
+        return expr
+    level = 1
+    comma_pos = None
+    res = ''
+    prev_pos = 0
+    for i in range(first_bracket + 1, len(expr)):
+        if expr[i] == '[':
+            level += 1
+            if level == 1:
+                first_bracket = i
+        elif expr[i] == ',' and level == 1:
+            comma_pos = i
+            print(comma_pos)
+        elif expr[i] == ']':
+            level -= 1
+            if level == 0:
+                l_arg = open_commutator(expr[first_bracket + 1: comma_pos])
+                r_arg = open_commutator(expr[comma_pos + 1: i])
+                res += expr[prev_pos: first_bracket]
+                res += '((%s)(%s)-(%s)(%s))' % (l_arg, r_arg, r_arg, l_arg)
+                prev_pos = i + 1
+    res += expr[prev_pos:]
+    return res
+
+def open_commutators(ideal):
+    res = []
+    for i in ideal:
+        res.append(open_commutator(i))
+        logger.debug('%s opens to %s' % (i, res[-1]))
+    return res
 
 # Generates code to be ran in Singular for the commutative case
 def generate_singular_commut(char, variables, ideal, hilbert=False, order_type='dp'):
@@ -205,8 +282,11 @@ def generate_singular_noncommut(char, variables, ideal, order_type='dp', max_ord
 def get_groebner_basis_noncommut_singular(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
     logger.debug('calculating noncommutative basis with singular')
     hs = None
-    new_ideal = power_to_multiplication(ideal, variables)
+    new_ideal = open_commutators(ideal)
+    new_ideal = power_to_multiplication(new_ideal, variables)
     new_ideal = insert_multiplication(new_ideal, variables)
+    new_ideal = open_brackets(new_ideal, variables)
+    new_ideal = power_to_multiplication(new_ideal, variables)
     new_ideal = convert_to_letterplace(new_ideal, variables)
     inputs = generate_singular_noncommut(char, variables, new_ideal, order_type, max_order, hilbert)
     logger.debug(inputs)
@@ -283,7 +363,8 @@ def generate_bergman_noncommut(char, variables, ideal, order_type='dp', max_orde
 
 def get_groebner_basis_noncommut_bergman(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
     logger.debug('calculating noncommutative basis with bergman')
-    new_ideal = power_to_multiplication(ideal, variables)
+    new_ideal = open_commutators(ideal)
+    new_ideal = power_to_multiplication(new_ideal, variables)
     new_ideal = insert_multiplication(new_ideal, variables)
     inputs = generate_bergman_noncommut(char, variables, new_ideal, order_type, max_order, hilbert)
     result = subprocess.run('time %s' % (utils.PATH_TO_BERGMAN),  preexec_fn=utils.limit_fn, shell=True,

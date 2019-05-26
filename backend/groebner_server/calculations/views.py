@@ -26,7 +26,7 @@ def do_calculation(data):
                         map(
                             lambda x: x.replace(' ', '').strip(),
                             # data['vars'].split(';')
-                            utils.SEPARATOR_REGEX.split(data['vars'])
+                            utils.VAR_SEPARATOR_REGEX.split(data['vars'])
                            )
                        ))
     data['basis'] = list(filter(
@@ -34,7 +34,7 @@ def do_calculation(data):
                          map(
                              lambda x: x.replace(' ', '').strip(),
                              # data['basis'].split(';')
-                             utils.SEPARATOR_REGEX.split(data['basis'])
+                             utils.IDEAL_SEPARATOR_REGEX.split(data['basis'])
                             )
                         ))
     data['hilbert'] = (data['hilbert'] == 1)
@@ -71,6 +71,7 @@ def submit_calculation(request):
             response = HttpResponse()
             response.status_code = 404
             return response
+        # calculation_results = do_calculation(data)
         try:
             calculation_results = do_calculation(data)
         except:
@@ -82,7 +83,7 @@ def submit_calculation(request):
         response.status_code = 200
         response['Access-Control-Allow-Origin'] = '165.22.70.250:80'
         return response
-        
+
     response = HttpResponse()
     response.status_code = 404
     return response
