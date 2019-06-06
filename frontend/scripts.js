@@ -100,7 +100,7 @@ function send_data() {
       error: function(result) {
 	  $('#computation_notify').html('Incorrect input');
       },
-      timeout: 5 * 60 * 1000, // max waiting time is 5 minutes
+        //timeout: 5 * 60 * 1000, // max waiting time is 5 minutes
     });
     console.log(post_str);
 }

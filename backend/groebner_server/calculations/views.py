@@ -1,11 +1,10 @@
 from django.http import HttpResponse
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 import json
 
 import pipes
 import calculations.calc_functions as calcs
 import calculations.utils as utils
-from celery import task
 
 import logging
 import sys
@@ -18,7 +17,6 @@ def index(request):
     return HttpResponse("Hello, world.")
 
 
-@task
 def do_calculation(data):
     data['characteristic'] = int(data['characteristic'])
     data['vars'] = list(filter(
@@ -45,6 +43,7 @@ def do_calculation(data):
                                                                              hilbert=data['hilbert'],
                                                                              max_order=int(data['max_degree']))
 
+    logger.debug(calc_res)
     response = dict()
     response['basis'] = '<br>'.join(calc_res[0][:utils.MAX_BASIS_LINES])
     response['code'] = calc_res[2]
@@ -53,15 +52,15 @@ def do_calculation(data):
     if data['hilbert']:
         response['hilbert'] = '<br>'.join(calc_res[1])
 
-    if not data['hilbert']:
-        calc_res = '\n'.join(calc_res[0])
-    else:
-        calc_res = 'Groebner basis:\n' + '\n'.join(calc_res[0]) + '\nHilbert series\n' + '\n'.join(calc_res[1])
     if data['email']:
-        send_mail('groebner basis calculation results',\
-                  calc_res,
-                  'groebner@calc.edu',
-                  [data['email']])
+        message = EmailMessage('groebner basis calculation results',
+                               'code\n%s' % calc_res[2].replace('<br>', '\n'),
+                               'groebner@calc.edu',
+                               [data['email']])
+        message.attach('groebner.txt', '\n'.join(calc_res[0]), 'text/plain')
+        if data['hilbert']:
+            message.attach('hilbert.txt', '\n'.join(calc_res[1]), 'text/plain')
+        message.send()
     return response
 
 def submit_calculation(request):
@@ -71,14 +70,16 @@ def submit_calculation(request):
             response = HttpResponse()
             response.status_code = 404
             return response
-        # calculation_results = do_calculation(data)
+        calculation_results = do_calculation(data)
+        '''
         try:
             calculation_results = do_calculation(data)
-        except:
-            logger.debug('exception cought')
+        except Exception as err:
+            logger.debug('exception cought %s' % err)
             response = HttpResponse()
             response.status_code = 500
             return response
+        '''
         response = HttpResponse(json.dumps(calculation_results).encode('utf-8'))
         response.status_code = 200
         response['Access-Control-Allow-Origin'] = '165.22.70.250:80'

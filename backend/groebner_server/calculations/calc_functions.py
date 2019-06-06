@@ -9,6 +9,8 @@ import calculations.utils as utils
 import sympy
 from sympy.parsing.sympy_parser import parse_expr
 
+import tempfile
+
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
 
@@ -220,8 +222,8 @@ def parse_singular_commut(data, hilbert=False):
     hs = None
     if hilbert:
         hs = list(filter(lambda x: len(x) > 0 and x[0] == '/' or len(x) == 0, data))
-        stop_pos = hs.index('')
-        hs = hs[:stop_pos]
+        start_pos = hs.index('') + 1
+        hs = hs[start_pos:]
     return gb, hs
 
 def get_groebner_basis_commut_singular(char, variables, ideal, hilbert=False, order_type='dp', max_order=4):
@@ -232,8 +234,8 @@ def get_groebner_basis_commut_singular(char, variables, ideal, hilbert=False, or
     inputs = generate_singular_commut(char, variables, new_ideal, hilbert, order_type)
     result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
                             stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    logger.debug('calculation finished')
 
-    time = str(result.stderr.decode('utf-8')).split(' ')[1]
     outputs = result.stdout.decode('utf-8').split('\n')
     time = '-1'
     if result.returncode != 0:
@@ -290,15 +292,25 @@ def get_groebner_basis_noncommut_singular(char, variables, ideal, order_type='dp
     new_ideal = convert_to_letterplace(new_ideal, variables)
     inputs = generate_singular_noncommut(char, variables, new_ideal, order_type, max_order, hilbert)
     logger.debug(inputs)
-    result = subprocess.run('time Singular',  preexec_fn=utils.limit_fn, shell=True,
-                            stderr=subprocess.PIPE, stdout=subprocess.PIPE, input=str.encode(inputs))
+    tmpfile = tempfile.TemporaryFile(mode='w+')
+    try:
+        result = subprocess.run('time Singular', stdout=tmpfile, shell=True,
+                                stderr=subprocess.PIPE,input=str.encode(inputs))
+        logger.debug('test')
+        tmpfile.flush()
+        tmpfile.seek(0)
+        logger.debug(tmpfile.read())
+        logger.debug('calculation finished')
+    except:
+        return ['runtime error'], ['runtime error'], inputs.replace(';', ';<br>'), -1
     time = '-1'
     if result.returncode != 0:
-        logger.debug('time out')
+        logger.debug('singular returned with %s' % result.returncode)
         gb = ['Calculation Timed Out']
         hs = ['Calculation Timed Out']
     else:
-        outputs = result.stdout.decode('utf-8').split('\n')
+        tmpfile.seek(0)
+        outputs = tmpfile.read().split('\n')
         time = str(result.stderr.decode('utf-8')).split(' ')[1]
         gb, hs = parse_singular_noncommut(outputs, hilbert)
 
@@ -353,7 +365,7 @@ def get_groebner_basis_commut_bergman(char, variables, ideal, order_type='dp', m
 def generate_bergman_noncommut(char, variables, ideal, order_type='dp', max_order=4, hilbert=False):
     inputs = ''
     inputs += '(noncommify)\n'
-    inputs += '(revlexify)\n'
+    # inputs += '(revlexify)\n'
     inputs += '(setmaxdeg %d)\n' % (max_order)
     inputs += '(setmodulus %d)\n' % (char)
     inputs += '(simple)\n'
