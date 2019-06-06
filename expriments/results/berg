@@ -1,0 +1,8 @@
+(setmaxdeg 5)
+(setalgoutmode alg)
+(algforminput)
+vars x,y,z;
+z*z+x*x*y+x*y*x+y*x*x,
+y*z+z*y +x*x*x,
+x*z+z*x+y*y
+;
